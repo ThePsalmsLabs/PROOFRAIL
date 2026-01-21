@@ -1,0 +1,35 @@
+[project]
+name = 'proofrail'
+description = ''
+authors = []
+telemetry = true
+cache_dir = './.cache'
+requirements = []
+[contracts.agent-vault]
+path = 'contracts/agent-vault.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.job-escrow]
+path = 'contracts/job-escrow.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.job-router]
+path = 'contracts/job-router.clar'
+clarity_version = 4
+epoch = 'latest'
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.lints]
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'

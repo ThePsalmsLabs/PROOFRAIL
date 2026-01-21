@@ -1,0 +1,88 @@
+[network]
+name = "devnet"
+deployment_fee_rate = 10
+
+# NOTE:
+# - Do NOT commit real mnemonics / secret keys.
+# - Copy this file to `settings/Devnet.toml` for local development and
+#   replace the placeholder values as needed.
+
+[accounts.deployer]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_1]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_2]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_3]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_4]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_5]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_6]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_7]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.wallet_8]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[accounts.faucet]
+mnemonic = "<REPLACE_WITH_LOCAL_DEV_MNEMONIC>"
+balance = 100_000_000_000_000
+sbtc_balance = 1_000_000_000
+
+[devnet]
+disable_stacks_explorer = false
+disable_stacks_api = false
+
+# Send some stacking orders
+[[devnet.pox_stacking_orders]]
+start_at_cycle = 1
+duration = 10
+auto_extend = true
+wallet = "wallet_1"
+slots = 2
+btc_address = "<REPLACE_WITH_BTC_ADDRESS>"
+
+[[devnet.pox_stacking_orders]]
+start_at_cycle = 1
+duration = 10
+auto_extend = true
+wallet = "wallet_2"
+slots = 2
+btc_address = "<REPLACE_WITH_BTC_ADDRESS>"
+
+[[devnet.pox_stacking_orders]]
+start_at_cycle = 1
+duration = 10
+auto_extend = true
+wallet = "wallet_3"
+slots = 2
+btc_address = "<REPLACE_WITH_BTC_ADDRESS>"
+
