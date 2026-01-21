@@ -1,0 +1,88 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: sip-010-trait
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 9440
+            path: contracts/traits/sip-010-trait.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: agent-vault
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 94460
+            path: contracts/agent-vault.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: alex-staking-v2-trait
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 5760
+            path: contracts/traits/alex-staking-v2-trait.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: alex-swap-helper-trait
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 4060
+            path: contracts/traits/alex-swap-helper-trait.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: job-escrow
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 63850
+            path: contracts/job-escrow.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: stake-registry
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 58480
+            path: contracts/stake-registry.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: job-router
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 46340
+            path: contracts/job-router.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: mock-alex
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 15950
+            path: contracts/mock-alex.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: mock-alex-staking-v2
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 17730
+            path: contracts/mock-alex-staking-v2.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: mock-swap-helper
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 10500
+            path: contracts/mock-swap-helper.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: mock-usdcx
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 18970
+            path: contracts/mock-usdcx.clar
+            anchor-block-only: true
+            clarity-version: 4
+      epoch: "3.3"
