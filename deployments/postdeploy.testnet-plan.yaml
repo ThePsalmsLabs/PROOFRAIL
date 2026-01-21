@@ -1,0 +1,44 @@
+---
+id: 1
+name: Testnet post-deploy configuration
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-call:
+            contract-id: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.agent-vault
+            method: set-job-escrow-contract
+            parameters:
+              - "'STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.job-escrow"
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 10000
+            anchor-block-only: true
+        - contract-call:
+            contract-id: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.agent-vault
+            method: set-job-router-contract
+            parameters:
+              - "'STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.job-router"
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 10000
+            anchor-block-only: true
+        - contract-call:
+            contract-id: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.job-escrow
+            method: set-job-router-contract
+            parameters:
+              - "'STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.job-router"
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 10000
+            anchor-block-only: true
+        - contract-call:
+            contract-id: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.stake-registry
+            method: set-job-router-contract
+            parameters:
+              - "'STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ.job-router"
+            expected-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+            cost: 10000
+            anchor-block-only: true
+      epoch: "3.3"
+

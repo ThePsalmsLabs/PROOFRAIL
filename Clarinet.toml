@@ -10,6 +10,41 @@ path = 'contracts/agent-vault.clar'
 clarity_version = 4
 epoch = 'latest'
 
+[contracts.sip-010-trait]
+path = 'contracts/traits/sip-010-trait.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.alex-swap-helper-trait]
+path = 'contracts/traits/alex-swap-helper-trait.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.alex-staking-v2-trait]
+path = 'contracts/traits/alex-staking-v2-trait.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.mock-usdcx]
+path = 'contracts/mock-usdcx.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.mock-alex]
+path = 'contracts/mock-alex.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.mock-swap-helper]
+path = 'contracts/mock-swap-helper.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.mock-alex-staking-v2]
+path = 'contracts/mock-alex-staking-v2.clar'
+clarity_version = 4
+epoch = 'latest'
+
 [contracts.job-escrow]
 path = 'contracts/job-escrow.clar'
 clarity_version = 4
@@ -19,6 +54,12 @@ epoch = 'latest'
 path = 'contracts/job-router.clar'
 clarity_version = 4
 epoch = 'latest'
+
+[contracts.stake-registry]
+path = 'contracts/stake-registry.clar'
+clarity_version = 4
+epoch = 'latest'
+
 [repl.analysis]
 passes = ['check_checker']
 

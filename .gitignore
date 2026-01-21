@@ -12,3 +12,11 @@ coverage
 *.info
 costs-reports.json
 node_modules
+
+# Documentation files (README.md is kept)
+DEMO_VIDEO.md
+IMPLEMENTATION_STATUS_REPORT.md
+INTEGRATION.md
+MASTER_SPECIFICATION.md
+scope1.md
+scope2.md
