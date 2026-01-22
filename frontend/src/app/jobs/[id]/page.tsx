@@ -1,7 +1,13 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { Container } from '@/components/layout/Container'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Badge } from '@/components/ui/Badge'
 import {
   cancelJob,
   claimStake,
@@ -10,245 +16,323 @@ import {
   getJob,
   getStakePosition,
   getUserStakeInfo,
-} from "@/lib/proofrail";
-import { getErrorMessage } from "@/lib/errors";
-import { useWallet } from "@/components/WalletProvider";
-
-function explorerTx(txid: string) {
-  const clean = txid.startsWith("0x") ? txid : `0x${txid}`;
-  return `https://explorer.hiro.so/txid/${clean}?chain=testnet`;
-}
+} from '@/lib/proofrail'
+import { getErrorMessage } from '@/lib/errors'
+import { useWallet } from '@/components/WalletProvider'
+import { formatUSDCx, formatAddress, formatBlockHeight } from '@/lib/utils/format'
+import { ArrowLeft, RefreshCw, XCircle, Zap, DollarSign } from 'lucide-react'
+import { toast } from 'sonner'
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
 }
 
-function statusLabel(status: bigint) {
-  switch (status) {
-    case 0n:
-      return "OPEN";
-    case 1n:
-      return "EXECUTED";
-    case 2n:
-      return "CANCELLED";
-    case 3n:
-      return "EXPIRED";
-    default:
-      return `UNKNOWN(${status})`;
+function statusFromNumber(status: bigint | number | undefined): 'open' | 'executed' | 'cancelled' | 'expired' {
+  const num = typeof status === 'bigint' ? Number(status) : status ?? 0
+  switch (num) {
+    case 0: return 'open'
+    case 1: return 'executed'
+    case 2: return 'cancelled'
+    case 3: return 'expired'
+    default: return 'open'
   }
 }
 
 export default function JobDetailPage({ params }: { params: { id: string } }) {
-  const jobId = useMemo(() => BigInt(params.id), [params.id]);
-
-  const { address } = useWallet();
-  const [job, setJob] = useState<unknown | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [txid, setTxid] = useState<string | null>(null);
-
-  const [swapAmount, setSwapAmount] = useState("100000");
-
-  const [stakeInfo, setStakeInfo] = useState<unknown | null>(null);
-  const [stakePositions, setStakePositions] = useState<unknown[]>([]);
+  const jobId = useMemo(() => BigInt(params.id), [params.id])
+  const { address } = useWallet()
+  const [job, setJob] = useState<unknown | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [swapAmount, setSwapAmount] = useState('100000')
+  const [stakeInfo, setStakeInfo] = useState<unknown | null>(null)
+  const [stakePositions, setStakePositions] = useState<unknown[]>([])
 
   async function refresh() {
-    if (!address) return;
-    setError(null);
-    setTxid(null);
+    if (!address) return
+    setError(null)
     try {
-      const j = await getJob(address, jobId);
-      setJob(j ?? null);
+      const j = await getJob(address, jobId)
+      setJob(j ?? null)
 
-      const info = await getUserStakeInfo(address, address);
-      setStakeInfo(info ?? null);
+      const info = await getUserStakeInfo(address, address)
+      setStakeInfo(info ?? null)
 
-      const infoRec = asRecord(info);
-      const positionCount = (infoRec?.["position-count"] as bigint | undefined) ?? 0n;
-      const max = positionCount > 10n ? 10n : positionCount; // avoid huge reads
+      const infoRec = asRecord(info)
+      const positionCount = (infoRec?.['position-count'] as bigint | undefined) ?? 0n
+      const max = positionCount > 10n ? 10n : positionCount
       const positions = await Promise.all(
-        Array.from({ length: Number(max) }, (_, i) => BigInt(i)).map(async (sid) => getStakePosition(address, address, sid))
-      );
-      setStakePositions(positions);
+        Array.from({ length: Number(max) }, (_, i) => BigInt(i)).map(async (sid) =>
+          getStakePosition(address, address, sid)
+        )
+      )
+      setStakePositions(positions)
     } catch (e: unknown) {
-      setError(getErrorMessage(e) || "Failed to load job.");
+      setError(getErrorMessage(e) || 'Failed to load job.')
     }
   }
 
   useEffect(() => {
-    void refresh();
+    void refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, jobId]);
+  }, [address, jobId])
 
-  const jobRec = asRecord(job);
-  const innerJob = jobRec && jobRec["type"] === "some" ? jobRec["value"] : job;
-  const innerRec = asRecord(innerJob);
-  const status = (innerRec?.["status"] as bigint | undefined) ?? undefined;
-  const payer = (innerRec?.["payer"] as string | undefined) ?? undefined;
-  const agent = (innerRec?.["agent"] as string | undefined) ?? undefined;
+  const jobRec = asRecord(job)
+  const innerJob = jobRec && jobRec['type'] === 'some' ? jobRec['value'] : job
+  const innerRec = asRecord(innerJob)
+  const status = (innerRec?.['status'] as bigint | undefined) ?? undefined
+  const payer = (innerRec?.['payer'] as string | undefined) ?? undefined
+  const agent = (innerRec?.['agent'] as string | undefined) ?? undefined
+  const maxInput = innerRec?.['max-input-amount'] as bigint | number | undefined
+  const agentFee = innerRec?.['agent-fee-amount'] as bigint | number | undefined
+  const expiryBlock = innerRec?.['expiry-block'] as bigint | number | undefined
+  const protocolUsed = innerRec?.['protocol-used'] as string | undefined
+  const outputAmount = innerRec?.['output-amount'] as bigint | number | undefined
 
-  const isPayer = address && payer && address === payer;
-  const isAgent = address && agent && address === agent;
+  const isPayer = address && payer && address === payer
+  const isAgent = address && agent && address === agent
 
-  async function runAction(fn: () => Promise<{ txid: string }>) {
-    setBusy(true);
-    setError(null);
-    setTxid(null);
+  async function runAction(fn: () => Promise<{ txid: string }>, successMessage: string) {
+    setBusy(true)
+    setError(null)
     try {
-      const res = await fn();
-      setTxid(res.txid);
-      await refresh();
+      const res = await fn()
+      toast.success(successMessage, {
+        description: `Transaction: ${res.txid.slice(0, 8)}...`,
+      })
+      await refresh()
     } catch (e: unknown) {
-      setError(getErrorMessage(e) || "Transaction failed.");
+      const message = getErrorMessage(e) || 'Transaction failed.'
+      setError(message)
+      toast.error('Action failed', { description: message })
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
+  if (!address) {
+    return (
+      <Container className="py-16">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-neutral-500 dark:text-neutral-400">
+              Connect your wallet to view and act on jobs
+            </p>
+          </CardContent>
+        </Card>
+      </Container>
+    )
+  }
+
+  if (error && !job) {
+    return (
+      <Container className="py-8">
+        <Card variant="default" className="border-error-500">
+          <CardContent className="pt-6">
+            <p className="text-error-600 dark:text-error-400">{error}</p>
+          </CardContent>
+        </Card>
+      </Container>
+    )
+  }
+
+  if (!job) {
+    return (
+      <Container className="py-8">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-neutral-500 dark:text-neutral-400">Job not found</p>
+          </CardContent>
+        </Card>
+      </Container>
+    )
+  }
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Job #{jobId.toString()}</h1>
-          <p className="mt-1 text-sm text-zinc-400">On-chain job details and actions.</p>
-        </div>
-        <Link href="/jobs" className="text-sm text-zinc-300 hover:text-zinc-100">
-          Back
+    <Container className="py-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/jobs">
+          <ArrowLeft className="h-5 w-5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-50" />
         </Link>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold text-neutral-900 dark:text-neutral-50">
+              Job #{jobId.toString()}
+            </h1>
+            {status !== undefined && <StatusBadge status={statusFromNumber(status)} />}
+          </div>
+          <p className="text-neutral-600 dark:text-neutral-400 mt-2">
+            On-chain job details and actions
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={refresh} disabled={busy}>
+          <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
+        </Button>
       </div>
 
-      {!address ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5 text-sm text-zinc-300">
-          Connect your wallet to view and act on jobs.
-        </div>
-      ) : error ? (
-        <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-5 text-sm text-red-200">{error}</div>
-      ) : !job ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5 text-sm text-zinc-300">Job not found.</div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Details</h2>
-              <span className="text-xs text-zinc-300">{status !== undefined ? statusLabel(status) : "—"}</span>
+      {/* Job Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Job Details</CardTitle>
+            <CardDescription>On-chain job information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Payer</p>
+                <p className="font-mono text-sm">{payer ? formatAddress(payer) : '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Agent</p>
+                <p className="font-mono text-sm">{agent ? formatAddress(agent) : '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Max Input</p>
+                <p className="text-sm font-medium">
+                  {maxInput ? formatUSDCx(typeof maxInput === 'bigint' ? Number(maxInput) : maxInput) : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Agent Fee</p>
+                <p className="text-sm font-medium text-success-600 dark:text-success-400">
+                  {agentFee ? formatUSDCx(typeof agentFee === 'bigint' ? Number(agentFee) : agentFee) : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Expiry Block</p>
+                <p className="text-sm font-medium">
+                  {expiryBlock ? formatBlockHeight(typeof expiryBlock === 'bigint' ? Number(expiryBlock) : expiryBlock) : '—'}
+                </p>
+              </div>
+              {protocolUsed && (
+                <div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Protocol</p>
+                  <Badge variant="primary">{protocolUsed}</Badge>
+                </div>
+              )}
             </div>
-            <div className="mt-4">
-              <pre className="overflow-auto rounded-lg bg-black/40 p-3 text-xs text-zinc-200">
-                {JSON.stringify(innerJob, null, 2)}
-              </pre>
-            </div>
-            {txid ? (
-              <p className="mt-4 text-sm text-zinc-300">
-                Tx:{" "}
-                <a className="font-mono underline hover:text-zinc-100" href={explorerTx(txid)} target="_blank">
-                  {txid}
-                </a>
-              </p>
-            ) : null}
-            <button
-              className="mt-4 rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-60"
-              onClick={refresh}
-              disabled={busy}
-            >
-              Refresh
-            </button>
-          </div>
+            {outputAmount && (
+              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Output Amount</p>
+                <p className="text-lg font-semibold">
+                  {formatUSDCx(typeof outputAmount === 'bigint' ? Number(outputAmount) : outputAmount)}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          <div className="space-y-6">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
-              <h2 className="text-sm font-semibold">Job actions</h2>
-              <p className="mt-1 text-xs text-zinc-400">Actions are permissioned by payer/agent roles.</p>
+        {/* Actions */}
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Actions</CardTitle>
+            <CardDescription>Permissioned by payer/agent roles</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isPayer && status === 0n && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => runAction(() => cancelJob(jobId), 'Job cancelled')}
+                loading={busy}
+                leftIcon={<XCircle className="h-4 w-4" />}
+              >
+                Cancel Job
+              </Button>
+            )}
 
-              <div className="mt-4 flex flex-col gap-3">
-                <button
-                  className="rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-60"
-                  onClick={() => runAction(() => cancelJob(jobId))}
-                  disabled={busy || !isPayer}
-                  title={!isPayer ? "Only payer can cancel" : ""}
+            {isAgent && status === 0n && (
+              <div className="space-y-3 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-4 w-4 text-brand-500" />
+                  <p className="text-sm font-medium">Execute Swap + Stake</p>
+                </div>
+                <Input
+                  type="number"
+                  label="Swap Amount (micro USDCx)"
+                  value={swapAmount}
+                  onChange={(e) => setSwapAmount(e.target.value)}
+                  disabled={busy}
+                />
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    runAction(
+                      () => executeSwapStakeJob({ jobId, swapAmount: BigInt(swapAmount) }),
+                      'Job executed successfully'
+                    )
+                  }
+                  loading={busy}
+                  disabled={!swapAmount}
                 >
-                  Cancel job (payer)
-                </button>
+                  Execute
+                </Button>
+              </div>
+            )}
 
-                <div className="rounded-lg border border-zinc-800 bg-black/30 p-3">
-                  <div className="text-xs font-semibold text-zinc-200">Execute swap+stake (agent)</div>
-                  <label className="mt-2 block text-xs text-zinc-300">
-                    Swap amount (USDCx base units)
-                    <input
-                      className="mt-2 w-full rounded-md border border-zinc-800 bg-black/40 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-600"
-                      value={swapAmount}
-                      onChange={(e) => setSwapAmount(e.target.value)}
-                      inputMode="numeric"
-                    />
-                  </label>
-                  <button
-                    className="mt-3 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
-                    onClick={() =>
-                      runAction(() => executeSwapStakeJob({ jobId, swapAmount: BigInt(swapAmount) }))
-                    }
-                    disabled={busy || !isAgent}
-                    title={!isAgent ? "Only agent can execute" : ""}
+            {isAgent && status === 1n && (
+              <Button
+                className="w-full"
+                onClick={() => runAction(() => claimAgentFee(jobId), 'Fee claimed')}
+                loading={busy}
+                leftIcon={<DollarSign className="h-4 w-4" />}
+              >
+                Claim Agent Fee
+              </Button>
+            )}
+
+            {!isPayer && !isAgent && (
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center py-4">
+                You are not the payer or agent for this job
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stake Positions */}
+      {stakePositions.length > 0 && (
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Your Stakes (ALEX)</CardTitle>
+            <CardDescription>Registry view for connected wallet (first 10 positions)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stakePositions.map((pos, i) => {
+                const posRec = asRecord(pos)
+                const claimed = posRec?.['claimed'] === true
+                return (
+                  <div
+                    key={i}
+                    className="p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
                   >
-                    Execute
-                  </button>
-                </div>
-
-                <button
-                  className="rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-60"
-                  onClick={() => runAction(() => claimAgentFee(jobId))}
-                  disabled={busy || !isAgent}
-                  title={!isAgent ? "Only agent can claim fee" : ""}
-                >
-                  Claim agent fee (agent)
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
-              <h2 className="text-sm font-semibold">Your stakes (ALEX)</h2>
-              <p className="mt-1 text-xs text-zinc-400">
-                Registry view for connected wallet. (Shows first 10 positions.)
-              </p>
-              <div className="mt-4">
-                {stakeInfo ? (
-                  <pre className="overflow-auto rounded-lg bg-black/40 p-3 text-xs text-zinc-200">
-                    {JSON.stringify(stakeInfo, null, 2)}
-                  </pre>
-                ) : (
-                  <span className="text-sm text-zinc-400">Loading…</span>
-                )}
-              </div>
-              {stakePositions.length ? (
-                <div className="mt-4 space-y-2">
-                  {stakePositions.map((pos, i) => {
-                    const posRec = asRecord(pos);
-                    const claimed = posRec?.["claimed"] === true;
-                    return (
-                      <div
-                        key={i}
-                        className="rounded-lg border border-zinc-800 bg-black/30 p-3 text-xs text-zinc-200"
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Stake ID: {i}</span>
+                      <Badge variant={claimed ? 'default' : 'success'}>
+                        {claimed ? 'Claimed' : 'Active'}
+                      </Badge>
+                    </div>
+                    {!claimed && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => runAction(() => claimStake(BigInt(i)), 'Stake claimed')}
+                        loading={busy}
                       >
-                      <div className="flex items-center justify-between">
-                        <div className="font-semibold">stake-id: {i}</div>
-                        <div className="text-zinc-400">{claimed ? "claimed" : "active"}</div>
-                      </div>
-                      <pre className="mt-2 overflow-auto">{JSON.stringify(pos, null, 2)}</pre>
-                      <button
-                        className="mt-3 rounded-md bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-60"
-                        onClick={() => runAction(() => claimStake(BigInt(i)))}
-                        disabled={busy || claimed}
-                      >
-                        Claim stake
-                      </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : null}
+                        Claim Stake
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
-    </div>
-  );
+    </Container>
+  )
 }
-
