@@ -84,6 +84,11 @@ plan:
             path: contracts/traits/alex-swap-helper-trait.clar
             clarity-version: 4
         - emulated-contract-publish:
+            contract-name: executor-trait
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/traits/executor-trait.clar
+            clarity-version: 4
+        - emulated-contract-publish:
             contract-name: job-escrow
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/job-escrow.clar
@@ -92,6 +97,11 @@ plan:
             contract-name: stake-registry
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/stake-registry.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: alex-executor
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/executors/alex-executor.clar
             clarity-version: 4
         - emulated-contract-publish:
             contract-name: job-router

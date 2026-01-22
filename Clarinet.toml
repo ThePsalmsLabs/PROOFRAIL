@@ -25,6 +25,16 @@ path = 'contracts/traits/alex-staking-v2-trait.clar'
 clarity_version = 4
 epoch = 'latest'
 
+[contracts.executor-trait]
+path = 'contracts/traits/executor-trait.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.alex-executor]
+path = 'contracts/executors/alex-executor.clar'
+clarity_version = 4
+epoch = 'latest'
+
 [contracts.mock-usdcx]
 path = 'contracts/mock-usdcx.clar'
 clarity_version = 4
