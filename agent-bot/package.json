@@ -1,0 +1,32 @@
+{
+  "name": "proofrail-agent-bot",
+  "version": "1.0.0",
+  "description": "Automated agent bot for PROOFRAIL protocol",
+  "main": "dist/agent.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/agent.js",
+    "dev": "ts-node agent.ts",
+    "monitor": "ts-node agent.ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "stacks",
+    "proofrail",
+    "agent",
+    "automation",
+    "defi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@stacks/network": "^6.13.0",
+    "@stacks/transactions": "^6.13.0",
+    "dotenv": "^16.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

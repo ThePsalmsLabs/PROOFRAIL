@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/layout/Footer";
 import { WalletProvider } from "@/components/WalletProvider";
+import { Toaster } from "sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "PROOFRAIL",
-  description: "Swap + stake job execution on Stacks",
+  title: "PROOFRAIL - Payment Rails for AI Agents",
+  description: "Automate DeFi operations with AI agents on Stacks. Deposit, create jobs, and execute complex workflows.",
 };
 
 export default function RootLayout({
@@ -27,11 +31,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 text-zinc-100 antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 antialiased font-sans`}
       >
         <WalletProvider>
           <NavBar />
-          <main className="mx-auto max-w-5xl px-4 py-10">{children}</main>
+          <main>{children}</main>
+          <Footer />
+          <Toaster position="top-right" richColors />
         </WalletProvider>
       </body>
     </html>
