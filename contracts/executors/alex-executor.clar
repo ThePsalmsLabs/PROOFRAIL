@@ -41,59 +41,28 @@
 ;; Executor Trait Implementation
 ;; -------------------------
 
+;; NOTE: The execute function is designed to be called via the legacy execute-swap-stake-job
+;; for now. A fully generic parameter-decoding system will be implemented in the future.
+;; For MVP, agents should use execute-swap-stake-job which properly handles all contracts.
+
 (define-public (execute
   (job-id uint)
   (input-amount uint)
   (params (buff 2048))
 )
   (let (
-    ;; Get job details from escrow
+    ;;Get job details from escrow
     (job (unwrap! (contract-call? .job-escrow get-job job-id) ERR-JOB-NOT-FOUND))
     (payer (get payer job))
-    (agent (get agent job))
-
-    ;; Decode ALEX-specific parameters
-    ;; For now, params are passed directly as contract calls will provide them
-    ;; In production, implement proper buffer decoding
   )
-    ;; This executor receives the actual trait contracts as part of the execution context
-    ;; The router will call this via as-contract with the necessary token balances
-    (execute-alex-swap-stake job-id payer agent input-amount params)
-  )
-)
-
-(define-private (execute-alex-swap-stake
-  (job-id uint)
-  (payer principal)
-  (agent principal)
-  (swap-amount uint)
-  (params (buff 2048))
-)
-  ;; This is a simplified version - the actual implementation will receive
-  ;; the necessary contracts via the router's context
-  ;;
-  ;; The full ALEX logic from job-router.clar will be moved here with proper
-  ;; parameter decoding in the next iteration
-
-  (let (
-    ;; Placeholder receipt - will be replaced with actual swap + stake logic
-    (receipt {
-      protocol: PROTOCOL-NAME,
-      action: "swap-stake",
-      job-id: job-id,
-      payer: payer,
-      agent: agent,
-      input: swap-amount,
-      output: u0,
-      block: stacks-block-height
-    })
-    (receipt-hash (sha256 (unwrap-panic (to-consensus-buff? receipt))))
-  )
+    ;; For MVP, return a simple placeholder response
+    ;; Agents should use the execute-swap-stake-job function instead
+    ;; which has the proper trait contracts
     (ok {
       success: true,
-      receipt-hash: receipt-hash,
+      receipt-hash: 0x00,
       output-amount: u0,
-      output-token: payer,  ;; Placeholder
+      output-token: payer,
       protocol-name: PROTOCOL-NAME,
       action-type: "swap-stake",
       gas-used: u0,
