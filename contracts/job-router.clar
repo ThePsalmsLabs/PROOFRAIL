@@ -26,6 +26,7 @@
 (define-public (execute-job
   (job-id uint)
   (executor <executor-trait>)
+  (input-token <sip-010-trait>)
   (input-amount uint)
   (executor-params (buff 2048))
 )
@@ -44,8 +45,13 @@
       (asserts! (< stacks-block-height expiry-block) ERR-EXPIRED)
       (asserts! (<= input-amount max-input) ERR-EXECUTION-FAILED)
       (asserts! (is-eq (contract-of executor) expected-executor) ERR-EXECUTOR-MISMATCH)
+      (asserts! (is-eq (contract-of input-token) (get input-token job)) ERR-EXECUTION-FAILED)
+
+      ;; Draw funds from vault to router (router will hold them during execution)
+      (try! (contract-call? .agent-vault draw-to-router payer job-id input-token input-amount))
 
       ;; Delegate execution to the executor contract
+      ;; The executor will access the funds via as-contract context
       (let (
         (execution-result (try! (contract-call? executor execute job-id input-amount executor-params)))
       )
