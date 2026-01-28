@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { createJob } from '@/lib/proofrail'
 import { getErrorMessage } from '@/lib/errors'
 import { useWallet } from '@/components/WalletProvider'
-import { Zap, DollarSign, User, Clock, Settings } from 'lucide-react'
+import { Zap, DollarSign, User, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function JobForm() {
