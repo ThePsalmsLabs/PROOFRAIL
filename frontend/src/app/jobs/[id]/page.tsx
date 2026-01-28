@@ -45,7 +45,6 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [swapAmount, setSwapAmount] = useState('100000')
-  const [stakeInfo, setStakeInfo] = useState<unknown | null>(null)
   const [stakePositions, setStakePositions] = useState<unknown[]>([])
 
   async function refresh() {
@@ -56,7 +55,6 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
       setJob(j ?? null)
 
       const info = await getUserStakeInfo(address, address)
-      setStakeInfo(info ?? null)
 
       const infoRec = asRecord(info)
       const positionCount = (infoRec?.['position-count'] as bigint | undefined) ?? 0n
