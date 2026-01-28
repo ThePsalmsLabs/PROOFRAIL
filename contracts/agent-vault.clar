@@ -1,6 +1,13 @@
 ;; agent-vault
 ;; USDCx custody and balance management with strict authorization controls.
-
+;;
+;; This contract manages user balances and job locks:
+;; - Users deposit USDCx into the vault
+;; - Funds are locked when jobs are created
+;; - Funds are drawn during job execution
+;; - Fees are released to agents after execution
+;; - Funds are unlocked on job cancellation/expiration
+;;
 ;; NOTE (Clarity v4): trait references cannot be stored in vars/maps.
 ;; To keep calls typed and safe, functions accept a SIP-010 trait reference
 ;; and the contract stores an allowlisted contract principal for validation.
