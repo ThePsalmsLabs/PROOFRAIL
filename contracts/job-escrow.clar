@@ -1,5 +1,14 @@
 ;; job-escrow
 ;; Job registry, lifecycle management, and payment settlement.
+;;
+;; This contract manages the full lifecycle of jobs:
+;; - Job creation (legacy ALEX-specific and generic protocol-agnostic)
+;; - Job execution tracking
+;; - Job cancellation and expiration
+;; - Agent fee claiming
+;;
+;; Jobs are stored with executor configuration, allowing protocol-agnostic execution
+;; via the job-router contract.
 
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
 
@@ -106,6 +115,23 @@
 ;; -------------------------
 
 ;; Legacy create-job (ALEX-specific) - maintains backward compatibility
+;; 
+;; @deprecated This function is maintained for backward compatibility.
+;; New integrations should use create-job-generic for protocol-agnostic job creation.
+;;
+;; Creates a job with ALEX-specific parameters and defaults to alex-executor.
+;; The job will swap USDCx for ALEX and stake it on behalf of the payer.
+;;
+;; @param token - SIP-010 token contract (must be USDCx)
+;; @param agent - Principal address of the agent assigned to execute this job
+;; @param max-input - Maximum amount of input token to use (in micro units)
+;; @param agent-fee - Fee amount for the agent (in micro units)
+;; @param min-alex-out - Minimum ALEX tokens expected from swap (slippage protection)
+;; @param lock-period - Number of reward cycles to lock the stake (1-32)
+;; @param expiry-blocks - Number of blocks until job expires
+;; @return job-id - The unique identifier for the created job
+;; @error ERR-INVALID-PARAMS - If any parameter is invalid
+;; @error ERR-UNAUTHORIZED - If caller is not authorized
 (define-public (create-job
   (token <sip-010-trait>)
   (agent principal)
@@ -166,7 +192,21 @@
   )
 )
 
-;; New generic create-job (protocol-agnostic)
+;; Generic create-job (protocol-agnostic)
+;;
+;; Creates a job with configurable executor contract and parameters.
+;; This allows jobs to work with any protocol that implements the executor-trait.
+;;
+;; @param input-token - SIP-010 token contract for input
+;; @param agent - Principal address of the agent assigned to execute this job
+;; @param max-input-amount - Maximum amount of input token to use (in micro units)
+;; @param agent-fee-amount - Fee amount for the agent (in micro units)
+;; @param executor-contract - Principal of the executor contract implementing executor-trait
+;; @param executor-params - Encoded parameters for the executor (buff 2048)
+;; @param expiry-blocks - Number of blocks until job expires
+;; @return job-id - The unique identifier for the created job
+;; @error ERR-INVALID-PARAMS - If any parameter is invalid
+;; @error ERR-UNAUTHORIZED - If caller is not authorized
 (define-public (create-job-generic
   (input-token <sip-010-trait>)
   (agent principal)
@@ -232,6 +272,16 @@
   )
 )
 
+;; Cancel an open job and unlock funds
+;;
+;; Only the job payer can cancel a job. Funds are returned to available balance.
+;; Jobs can only be cancelled if they are still in OPEN status.
+;;
+;; @param job-id - The job identifier to cancel
+;; @return true - If cancellation was successful
+;; @error ERR-JOB-NOT-FOUND - If the job does not exist
+;; @error ERR-NOT-PAYER - If caller is not the job payer
+;; @error ERR-INVALID-STATUS - If job is not in OPEN status
 (define-public (cancel-job (job-id uint))
   (let (
     (job (unwrap! (get-job job-id) ERR-JOB-NOT-FOUND))
@@ -249,6 +299,16 @@
   )
 )
 
+;; Expire an open job that has passed its expiry block
+;;
+;; Anyone can call this to expire a job that has passed its expiry block.
+;; Funds are returned to available balance.
+;;
+;; @param job-id - The job identifier to expire
+;; @return true - If expiration was successful
+;; @error ERR-JOB-NOT-FOUND - If the job does not exist
+;; @error ERR-INVALID-STATUS - If job is not in OPEN status
+;; @error ERR-INVALID-PARAMS - If job has not yet expired
 (define-public (expire-job (job-id uint))
   (let (
     (job (unwrap! (get-job job-id) ERR-JOB-NOT-FOUND))
@@ -266,6 +326,23 @@
   )
 )
 
+;; Mark a job as executed (called by job-router after successful execution)
+;;
+;; This function can only be called by the job-router contract.
+;; It updates the job status and stores execution results for UX purposes.
+;;
+;; @param job-id - The job identifier
+;; @param receipt-hash - SHA256 hash of the execution receipt
+;; @param output-amount - Amount of output tokens received
+;; @param output-token - Principal of the output token contract
+;; @param protocol-name - Name of the protocol used (e.g., "ALEX")
+;; @param action-type - Type of action performed (e.g., "swap-stake")
+;; @param gas-used - Gas consumed (for tracking, currently u0)
+;; @return true - If marking was successful
+;; @error ERR-UNAUTHORIZED - If caller is not job-router
+;; @error ERR-JOB-NOT-FOUND - If the job does not exist
+;; @error ERR-INVALID-STATUS - If job is not in OPEN status
+;; @error ERR-EXPIRED - If job has expired
 (define-public (mark-executed
   (job-id uint)
   (receipt-hash (buff 32))
@@ -307,6 +384,19 @@
   )
 )
 
+;; Claim agent fee for an executed job
+;;
+;; Only the assigned agent can claim the fee after successful job execution.
+;; The fee is transferred from the vault to the agent.
+;;
+;; @param job-id - The job identifier
+;; @param token - SIP-010 token contract (must match job input-token)
+;; @return fee-amount - The amount of fee claimed
+;; @error ERR-JOB-NOT-FOUND - If the job does not exist
+;; @error ERR-NOT-AGENT - If caller is not the assigned agent
+;; @error ERR-INVALID-STATUS - If job is not in EXECUTED status
+;; @error ERR-FEE-ALREADY-PAID - If fee has already been claimed
+;; @error ERR-TOKEN-MISMATCH - If token does not match job input-token
 (define-public (claim-fee (job-id uint) (token <sip-010-trait>))
   (let (
     (job (unwrap! (get-job job-id) ERR-JOB-NOT-FOUND))
