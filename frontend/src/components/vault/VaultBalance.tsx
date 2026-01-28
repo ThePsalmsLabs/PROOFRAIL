@@ -13,8 +13,12 @@ interface VaultBalanceProps {
 export function VaultBalance({ loading }: VaultBalanceProps) {
   const { balance } = useVaultStore()
   
-  const utilization = balance.total > 0 
-    ? (balance.locked / balance.total) * 100 
+  const totalNum = Number(balance.total)
+  const lockedNum = Number(balance.locked)
+  const availableNum = Number(balance.available)
+  
+  const utilization = totalNum > 0 
+    ? (lockedNum / totalNum) * 100 
     : 0
 
   if (loading) {
