@@ -47,6 +47,9 @@
 ;; USDCx token contract on Stacks
 (define-data-var usdcx-token principal .mock-usdcx)
 
+;; Agent vault contract for auto-deposit functionality
+(define-data-var agent-vault-contract principal .agent-vault)
+
 ;; Bridge fee (basis points - 10 = 0.1%)
 (define-data-var bridge-fee-bps uint u10)
 
@@ -125,6 +128,14 @@
   (begin
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
     (var-set usdcx-token token)
+    (ok true)
+  )
+)
+
+(define-public (set-agent-vault-contract (vault principal))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    (var-set agent-vault-contract vault)
     (ok true)
   )
 )
@@ -222,25 +233,13 @@
       (asserts! (is-none (map-get? processed-messages {message-hash: message-hash})) ERR-MESSAGE-ALREADY-PROCESSED)
 
       ;; Validate attestation based on protocol type
-      (match protocol
-        ;; xReserve: Verify Circle xReserve attestation
-        u0 (begin
-          ;; Call xReserve contract to verify attestation
-          ;; In production: (contract-call? (var-get xreserve-contract) verify-attestation message attestation)
-          (asserts! (> (len attestation) u0) ERR-ATTESTATION-INVALID)
-        )
-        ;; CCTP: Verify CCTP message attestation
-        u1 (begin
-          ;; In production: (contract-call? (var-get cctp-message-transmitter) receiveMessage message attestation)
-          (asserts! (> (len attestation) u0) ERR-ATTESTATION-INVALID)
-        )
-        ;; Allbridge: Verify Allbridge signature
-        u2 (begin
-          ;; In production: Verify Allbridge validator signatures
-          (asserts! (> (len attestation) u0) ERR-ATTESTATION-INVALID)
-        )
-        (err ERR-UNSUPPORTED-CHAIN)
-      )
+      ;; Protocol: 0 = xReserve, 1 = CCTP, 2 = Allbridge
+      (asserts! (<= protocol u2) ERR-UNSUPPORTED-CHAIN)
+      (asserts! (> (len attestation) u0) ERR-ATTESTATION-INVALID)
+      ;; In production, each protocol would have specific validation:
+      ;; - xReserve (u0): contract-call? xreserve verify-attestation
+      ;; - CCTP (u1): contract-call? cctp-message-transmitter receiveMessage
+      ;; - Allbridge (u2): Verify Allbridge validator signatures
 
       ;; Mark message as processed
       (map-set processed-messages
@@ -280,7 +279,7 @@
 )
 
 ;; Auto-deposit bridged USDC directly into ProofRail vault
-;; This creates a seamless UX: bridge → vault → ready to create jobs
+;; This creates a seamless UX: bridge -> vault -> ready to create jobs
 (define-public (bridge-and-deposit
   (source-chain uint)
   (amount uint)
@@ -291,7 +290,7 @@
   )
     (begin
       ;; In real implementation, once CCTP message is received:
-      ;; 1. CCTP message arrives → USDCx minted
+      ;; 1. CCTP message arrives -> USDCx minted
       ;; 2. Automatically call agent-vault.deposit() on behalf of user
       ;; 3. User's vault balance increases without extra transaction
 
@@ -352,8 +351,6 @@
   (vault-token <sip-010-trait>)
 )
   (let (
-    (usdcx (var-get usdcx-token))
-    (vault (var-get agent-vault-contract))
     (bridge-fee (/ (* amount (var-get bridge-fee-bps)) u10000))
     (net-amount (- amount bridge-fee))
   )
@@ -361,23 +358,22 @@
       ;; Verify message was processed
       (asserts! (is-some (map-get? processed-messages {message-hash: message-hash})) ERR-MESSAGE-ALREADY-PROCESSED)
 
-      ;; Auto-deposit to vault on behalf of user
-      ;; This creates seamless UX: bridge → vault → ready to create jobs
-      (try! (contract-call? vault deposit-for-user vault-token net-amount recipient))
+      ;; NOTE: Auto-deposit to vault requires agent-vault to expose deposit-for-user
+      ;; For now, emit event for off-chain relayer to complete the deposit
+      ;; Future: (try! (contract-call? .agent-vault deposit-for-user vault-token net-amount recipient))
 
       (print {
-        event: "bridge-completed-and-deposited",
+        event: "bridge-completed-ready-for-deposit",
         message-hash: message-hash,
         recipient: recipient,
         amount: amount,
         net-amount: net-amount,
-        vault: vault
+        vault-token: (contract-of vault-token)
       })
 
       (ok {
         recipient: recipient,
-        amount-deposited: net-amount,
-        vault: vault
+        amount-deposited: net-amount
       })
     )
   )
