@@ -70,6 +70,16 @@ path = 'contracts/stake-registry.clar'
 clarity_version = 4
 epoch = 'latest'
 
+[contracts.pyth-price-oracle]
+path = 'contracts/pyth-price-oracle.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.cctp-bridge-adapter]
+path = 'contracts/cctp-bridge-adapter.clar'
+clarity_version = 4
+epoch = 'latest'
+
 [repl.analysis]
 passes = ['check_checker']
 
