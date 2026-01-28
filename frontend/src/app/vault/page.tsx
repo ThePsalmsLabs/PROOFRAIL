@@ -8,41 +8,17 @@ import { DepositForm } from '@/components/vault/DepositForm'
 import { WithdrawForm } from '@/components/vault/WithdrawForm'
 import { useWallet } from '@/components/WalletProvider'
 import { useVaultStore } from '@/lib/stores/vault'
-import { getVaultBalance } from '@/lib/proofrail'
-import { getErrorMessage } from '@/lib/errors'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Wallet } from 'lucide-react'
 
 export default function VaultPage() {
   const { address } = useWallet()
-  const { balance, loading, setBalance, setLoading } = useVaultStore()
+  const { loading, refetch } = useVaultStore()
 
   useEffect(() => {
-    if (!address) {
-      setBalance({ total: 0, available: 0, locked: 0 })
-      return
-    }
-
-    async function loadBalance() {
-      if (!address) return
-      setLoading(true)
-      try {
-        const result = await getVaultBalance(address, address)
-        if (result && typeof result === 'object' && !Array.isArray(result) && 'total' in result) {
-          const total = typeof result.total === 'bigint' ? Number(result.total) : typeof result.total === 'number' ? result.total : 0
-          const available = typeof result.available === 'bigint' ? Number(result.available) : typeof result.available === 'number' ? result.available : 0
-          const locked = typeof result.locked === 'bigint' ? Number(result.locked) : typeof result.locked === 'number' ? result.locked : 0
-          setBalance({ total, available, locked })
-        }
-      } catch (err) {
-        console.error('Failed to load vault balance:', getErrorMessage(err))
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadBalance()
-  }, [address, setBalance, setLoading])
+    if (!address) return
+    refetch(address, address)
+  }, [address, refetch])
 
   if (!address) {
     return (
