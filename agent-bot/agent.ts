@@ -1,4 +1,22 @@
-import { Cl, ClarityValue, cvToValue, principalCV } from '@stacks/transactions';
+import { 
+  Cl, 
+  ClarityValue, 
+  cvToValue, 
+  makeContractCall,
+  broadcastTransaction,
+  AnchorMode,
+  PostConditionMode,
+  getAddressFromPrivateKey,
+  TransactionVersion,
+  createStacksPrivateKey,
+  privateKeyToString,
+  getNonce,
+  callReadOnlyFunction,
+  ReadOnlyFunctionOptions,
+  uintCV,
+  contractPrincipalCV,
+  principalCV,
+} from '@stacks/transactions';
 import { StacksTestnet, StacksMainnet } from '@stacks/network';
 
 /**
@@ -46,12 +64,16 @@ export class ProofRailAgent {
   private config: AgentConfig;
   private network: StacksTestnet | StacksMainnet;
   private isRunning: boolean = false;
+  private apiBaseUrl: string;
 
   constructor(config: AgentConfig) {
     this.config = config;
     this.network = config.network === 'mainnet'
       ? new StacksMainnet()
       : new StacksTestnet();
+    this.apiBaseUrl = config.network === 'mainnet'
+      ? 'https://api.hiro.so'
+      : 'https://api.testnet.hiro.so';
   }
 
   /**
@@ -132,6 +154,20 @@ export class ProofRailAgent {
 
     console.log(`   ⏳ Expiry: ${blocksUntilExpiry} blocks remaining`);
 
+    // Price validation (if enabled)
+    if (this.config.priceValidation?.enabled) {
+      try {
+        const priceValid = await this.validatePrice(job);
+        if (!priceValid) {
+          console.log(`   ⏭️  Skipping: Price validation failed`);
+          return;
+        }
+      } catch (error) {
+        console.error(`   ⚠️  Price validation error:`, error);
+        // Continue execution if price validation fails (don't block jobs)
+      }
+    }
+
     try {
       // Execute the job
       await this.executeJob(job);
@@ -146,6 +182,69 @@ export class ProofRailAgent {
   }
 
   /**
+   * Validate price using Pyth oracle (if enabled)
+   */
+  private async validatePrice(job: Job): Promise<boolean> {
+    if (!this.config.priceValidation?.enabled) {
+      return true; // Skip validation if disabled
+    }
+
+    console.log(`   💹 Validating price...`);
+
+    try {
+      // Fetch price data from Pyth API (pull integration)
+      // In production, this would call Pyth's API to get latest price
+      const [pythDeployer, pythName] = this.parseContract(this.config.contracts.pythOracle);
+      const [usdcxDeployer] = this.parseContract(this.config.contracts.mockUsdcx);
+      const [alexDeployer] = this.parseContract(this.config.contracts.mockAlex);
+
+      // For now, return true - actual implementation would:
+      // 1. Fetch price from Pyth API
+      // 2. Validate price is within acceptable range
+      // 3. Check price freshness
+      console.log(`   ✅ Price validation passed (mock)`);
+      return true;
+    } catch (error) {
+      console.error(`   ❌ Price validation error:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Fetch price data from Pyth Network API
+   */
+  private async fetchPythPrice(feedId: string): Promise<{
+    price: bigint;
+    confidence: bigint;
+    publishTime: number;
+    expo: number;
+  }> {
+    // Pyth pull API endpoint
+    const apiUrl = this.config.priceValidation?.pythApiUrl || 'https://hermes.pyth.network/v2/updates/price';
+    
+    try {
+      const response = await fetch(`${apiUrl}?ids[]=${feedId}`);
+      if (!response.ok) {
+        throw new Error(`Pyth API error: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      // Parse Pyth price data structure
+      const priceData = data.parsed?.[0] || data;
+      
+      return {
+        price: BigInt(priceData.price?.price || 0),
+        confidence: BigInt(priceData.price?.conf || 0),
+        publishTime: priceData.price?.publish_time || Math.floor(Date.now() / 1000),
+        expo: priceData.price?.expo || -8,
+      };
+    } catch (error) {
+      console.error('Failed to fetch Pyth price:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Execute a job by calling alex-executor
    */
   private async executeJob(job: Job): Promise<void> {
@@ -154,46 +253,49 @@ export class ProofRailAgent {
     // Calculate swap amount (use 50% of max input for safety margin)
     const swapAmount = job.maxInputAmount / BigInt(2);
 
-    const txOptions = {
-      contractAddress: this.extractDeployer(this.config.contracts.alexExecutor),
-      contractName: this.extractContractName(this.config.contracts.alexExecutor),
+    const [escrowDeployer, escrowName] = this.parseContract(this.config.contracts.jobEscrow);
+    const [executorDeployer, executorName] = this.parseContract(this.config.contracts.alexExecutor);
+    const [usdcxDeployer, usdcxName] = this.parseContract(this.config.contracts.mockUsdcx);
+    const [alexDeployer, alexName] = this.parseContract(this.config.contracts.mockAlex);
+    const [swapDeployer, swapName] = this.parseContract(this.config.contracts.mockSwapHelper);
+    const [stakingDeployer, stakingName] = this.parseContract(this.config.contracts.mockAlexStaking);
+
+    const privateKey = createStacksPrivateKey(this.config.privateKey);
+    const senderAddress = getAddressFromPrivateKey(privateKey, this.network.version);
+
+    // Get nonce
+    const nonce = await getNonce(senderAddress, this.network);
+
+    const tx = await makeContractCall({
+      contractAddress: executorDeployer,
+      contractName: executorName,
       functionName: 'execute-swap-stake-job',
       functionArgs: [
-        Cl.uint(job.jobId),
-        Cl.contractPrincipal(
-          this.extractDeployer(this.config.contracts.mockUsdcx),
-          this.extractContractName(this.config.contracts.mockUsdcx)
-        ),
-        Cl.contractPrincipal(
-          this.extractDeployer(this.config.contracts.mockAlex),
-          this.extractContractName(this.config.contracts.mockAlex)
-        ),
-        Cl.contractPrincipal(
-          this.extractDeployer(this.config.contracts.mockSwapHelper),
-          this.extractContractName(this.config.contracts.mockSwapHelper)
-        ),
-        Cl.contractPrincipal(
-          this.extractDeployer(this.config.contracts.mockAlexStaking),
-          this.extractContractName(this.config.contracts.mockAlexStaking)
-        ),
-        Cl.uint(95), // factor
-        Cl.uint(Number(swapAmount))
+        uintCV(job.jobId),
+        contractPrincipalCV(usdcxDeployer, usdcxName),
+        contractPrincipalCV(alexDeployer, alexName),
+        contractPrincipalCV(swapDeployer, swapName),
+        contractPrincipalCV(stakingDeployer, stakingName),
+        uintCV(100_000_000n), // factor
+        uintCV(swapAmount),
       ],
-      senderKey: this.config.privateKey,
+      senderKey: privateKeyToString(privateKey),
       network: this.network,
-      anchorMode: 1,
-    };
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+      nonce,
+      fee: BigInt(1000), // Base fee
+    });
 
-    // In production, you'd use @stacks/transactions makeContractCall and broadcastTransaction
     console.log(`   📤 Broadcasting transaction...`);
     console.log(`   💰 Swap amount: ${swapAmount} USDCx`);
     console.log(`   🎯 Min ALEX out: ${job.minAlexOut}`);
 
-    // TODO: Implement actual transaction broadcasting
-    // const txId = await this.broadcastTransaction(txOptions);
-    // await this.waitForTransaction(txId);
+    const txId = await this.broadcastTransaction(tx);
+    console.log(`   📝 Transaction ID: ${txId}`);
 
-    console.log(`   ✅ Job executed (simulated)`);
+    await this.waitForTransaction(txId);
+    console.log(`   ✅ Job executed successfully`);
   }
 
   /**
@@ -202,76 +304,221 @@ export class ProofRailAgent {
   private async claimFee(jobId: number): Promise<void> {
     console.log(`   💵 Claiming fee...`);
 
-    const txOptions = {
-      contractAddress: this.extractDeployer(this.config.contracts.jobEscrow),
-      contractName: this.extractContractName(this.config.contracts.jobEscrow),
+    const [escrowDeployer, escrowName] = this.parseContract(this.config.contracts.jobEscrow);
+    const [usdcxDeployer, usdcxName] = this.parseContract(this.config.contracts.mockUsdcx);
+
+    const privateKey = createStacksPrivateKey(this.config.privateKey);
+    const senderAddress = getAddressFromPrivateKey(privateKey, this.network.version);
+
+    // Get nonce
+    const nonce = await getNonce(senderAddress, this.network);
+
+    const tx = await makeContractCall({
+      contractAddress: escrowDeployer,
+      contractName: escrowName,
       functionName: 'claim-fee',
       functionArgs: [
-        Cl.uint(jobId),
-        Cl.contractPrincipal(
-          this.extractDeployer(this.config.contracts.mockUsdcx),
-          this.extractContractName(this.config.contracts.mockUsdcx)
-        )
+        uintCV(jobId),
+        contractPrincipalCV(usdcxDeployer, usdcxName),
       ],
-      senderKey: this.config.privateKey,
+      senderKey: privateKeyToString(privateKey),
       network: this.network,
-      anchorMode: 1,
-    };
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+      nonce,
+      fee: BigInt(1000),
+    });
 
-    // TODO: Implement actual transaction broadcasting
-    console.log(`   ✅ Fee claimed (simulated)`);
+    const txId = await this.broadcastTransaction(tx);
+    console.log(`   📝 Transaction ID: ${txId}`);
+
+    await this.waitForTransaction(txId);
+    console.log(`   ✅ Fee claimed successfully`);
   }
 
   /**
    * Get all open jobs assigned to this agent
    */
   private async getMyOpenJobs(): Promise<Job[]> {
-    // TODO: Implement actual contract call to get jobs
-    // This would use read-only contract calls to job-escrow
-    // and filter by agent address and status=0 (open)
+    const [escrowDeployer, escrowName] = this.parseContract(this.config.contracts.jobEscrow);
+    const privateKey = createStacksPrivateKey(this.config.privateKey);
+    const senderAddress = getAddressFromPrivateKey(privateKey, this.network.version);
 
-    // For simulation:
-    const mockJobs: Job[] = [
-      // {
-      //   jobId: 0,
-      //   payer: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
-      //   agent: this.config.agentAddress,
-      //   inputToken: this.config.contracts.mockUsdcx,
-      //   maxInputAmount: BigInt(1000000),
-      //   agentFeeAmount: BigInt(50000),
-      //   minAlexOut: BigInt(900000),
-      //   lockPeriod: BigInt(12),
-      //   expiryBlock: BigInt(1000),
-      //   status: 0,
-      //   createdAtBlock: BigInt(900),
-      //   feePaid: false
-      // }
-    ];
+    try {
+      // Get next job ID (nonce)
+      const nextIdResult = await callReadOnlyFunction({
+        contractAddress: escrowDeployer,
+        contractName: escrowName,
+        functionName: 'get-next-job-id',
+        functionArgs: [],
+        network: this.network,
+        senderAddress,
+      });
 
-    return mockJobs;
+      const nextId = cvToValue(nextIdResult);
+      const nextIdNum = typeof nextId === 'bigint' ? Number(nextId) : Number(nextId);
+
+      if (nextIdNum === 0) {
+        return [];
+      }
+
+      // Fetch jobs in batches (check last 100 jobs)
+      const startId = Math.max(0, nextIdNum - 100);
+      const jobs: Job[] = [];
+
+      for (let id = startId; id < nextIdNum; id++) {
+        try {
+          const jobResult = await callReadOnlyFunction({
+            contractAddress: escrowDeployer,
+            contractName: escrowName,
+            functionName: 'get-job',
+            functionArgs: [uintCV(id)],
+            network: this.network,
+            senderAddress,
+          });
+
+          const jobData = cvToValue(jobResult);
+          
+          // Check if job exists and matches our agent
+          if (jobData && typeof jobData === 'object' && !Array.isArray(jobData)) {
+            const job = jobData as Record<string, unknown>;
+            const agent = job.agent as string;
+            const status = typeof job.status === 'bigint' ? Number(job.status) : Number(job.status);
+
+            // Filter: must be assigned to this agent and status must be OPEN (0)
+            if (agent === this.config.agentAddress && status === 0) {
+              jobs.push({
+                jobId: id,
+                payer: job.payer as string,
+                agent: agent,
+                inputToken: job['input-token'] as string,
+                maxInputAmount: typeof job['max-input-amount'] === 'bigint' 
+                  ? job['max-input-amount'] 
+                  : BigInt(job['max-input-amount'] as number),
+                agentFeeAmount: typeof job['agent-fee-amount'] === 'bigint'
+                  ? job['agent-fee-amount']
+                  : BigInt(job['agent-fee-amount'] as number),
+                minAlexOut: typeof job['min-alex-out'] === 'bigint'
+                  ? job['min-alex-out']
+                  : BigInt(job['min-alex-out'] as number),
+                lockPeriod: typeof job['lock-period'] === 'bigint'
+                  ? job['lock-period']
+                  : BigInt(job['lock-period'] as number),
+                expiryBlock: typeof job['expiry-block'] === 'bigint'
+                  ? job['expiry-block']
+                  : BigInt(job['expiry-block'] as number),
+                status: status,
+                createdAtBlock: typeof job['created-at-block'] === 'bigint'
+                  ? job['created-at-block']
+                  : BigInt(job['created-at-block'] as number),
+                feePaid: job['fee-paid'] as boolean,
+              });
+            }
+          }
+        } catch (error) {
+          // Job might not exist, skip it
+          continue;
+        }
+      }
+
+      return jobs;
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
+      return [];
+    }
   }
 
   /**
    * Get current block height
    */
   private async getCurrentBlockHeight(): Promise<number> {
-    // TODO: Implement actual API call to get current block height
-    // from Stacks node
-    return 950;
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/v2/info`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch block height: ${response.statusText}`);
+      }
+      const data = await response.json() as { stacks_tip_height: number };
+      return data.stacks_tip_height;
+    } catch (error) {
+      console.error('Failed to get current block height:', error);
+      throw error;
+    }
   }
 
   /**
-   * Helper: Extract deployer address from contract principal
+   * Parse contract principal into [deployer, contractName]
    */
-  private extractDeployer(contractPrincipal: string): string {
-    return contractPrincipal.split('.')[0];
+  private parseContract(contractPrincipal: string): [string, string] {
+    const parts = contractPrincipal.split('.');
+    if (parts.length !== 2) {
+      throw new Error(`Invalid contract principal: ${contractPrincipal}`);
+    }
+    return [parts[0], parts[1]];
   }
 
   /**
-   * Helper: Extract contract name from contract principal
+   * Broadcast a transaction with retry logic
    */
-  private extractContractName(contractPrincipal: string): string {
-    return contractPrincipal.split('.')[1];
+  private async broadcastTransaction(tx: any): Promise<string> {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await broadcastTransaction(tx, this.network);
+        if (response.error) {
+          throw new Error(`Transaction broadcast failed: ${response.error}`);
+        }
+        return response.txid;
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < maxRetries) {
+          const delay = attempt * 1000; // Exponential backoff
+          console.log(`   ⚠️  Broadcast attempt ${attempt} failed, retrying in ${delay}ms...`);
+          await this.sleep(delay);
+        }
+      }
+    }
+
+    throw new Error(`Failed to broadcast transaction after ${maxRetries} attempts: ${lastError?.message}`);
+  }
+
+  /**
+   * Wait for transaction confirmation
+   */
+  private async waitForTransaction(txId: string, maxWaitBlocks = 10): Promise<void> {
+    const startBlock = await this.getCurrentBlockHeight();
+    const endBlock = startBlock + maxWaitBlocks;
+
+    console.log(`   ⏳ Waiting for confirmation (block ${startBlock} to ${endBlock})...`);
+
+    while (true) {
+      const currentBlock = await this.getCurrentBlockHeight();
+      
+      if (currentBlock > endBlock) {
+        throw new Error(`Transaction ${txId} not confirmed after ${maxWaitBlocks} blocks`);
+      }
+
+      try {
+        const response = await fetch(`${this.apiBaseUrl}/extended/v1/tx/${txId}`);
+        if (response.ok) {
+          const txData = await response.json() as { tx_status: string };
+          
+          if (txData.tx_status === 'success') {
+            console.log(`   ✅ Transaction confirmed at block ${currentBlock}`);
+            return;
+          }
+          
+          if (txData.tx_status === 'abort_by_response' || txData.tx_status === 'abort_by_post_condition') {
+            throw new Error(`Transaction ${txId} failed: ${txData.tx_status}`);
+          }
+        }
+      } catch (error) {
+        // Transaction might not be in mempool yet, continue waiting
+      }
+
+      await this.sleep(5000); // Wait 5 seconds before checking again
+    }
   }
 
   /**
