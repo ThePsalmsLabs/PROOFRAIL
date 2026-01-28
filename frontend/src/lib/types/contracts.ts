@@ -106,6 +106,69 @@ export interface WalletState {
 }
 
 // ============================================================================
+// Price Oracle Types
+// ============================================================================
+
+/**
+ * Price data from Pyth oracle
+ */
+export interface PriceData {
+  price: bigint
+  confidenceInterval: bigint
+  publishBlock: number
+  expo: number
+}
+
+/**
+ * TWAP (Time-Weighted Average Price) data
+ */
+export interface TWAPData {
+  twap: bigint
+  lastUpdate: bigint
+  samples: bigint
+}
+
+// ============================================================================
+// Bridge Types
+// ============================================================================
+
+/**
+ * Bridge request status
+ */
+export enum BridgeStatus {
+  PENDING = 0,
+  ATTESTED = 1,
+  COMPLETED = 2,
+  FAILED = 3,
+}
+
+/**
+ * Bridge request data
+ */
+export interface BridgeRequest {
+  id: number
+  user: string
+  sourceChain: number
+  destination: string
+  amount: bigint
+  status: number
+  createdAtBlock: bigint
+  completedAtBlock?: bigint
+  sourceTxHash?: string
+}
+
+/**
+ * Supported chain configuration
+ */
+export interface ChainConfig {
+  domain: number
+  name: string
+  enabled: boolean
+  minAmount: bigint
+  maxAmount: bigint
+}
+
+// ============================================================================
 // Type Guards and Validators
 // ============================================================================
 

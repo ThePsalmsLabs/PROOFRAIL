@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { deposit, getVaultBalance, withdraw, type JsonClarity } from "@/lib/proofrail";
+import { deposit, getVaultBalance, withdraw } from "@/lib/proofrail";
+import type { VaultBalance } from "@/lib/types/contracts";
 import { getErrorMessage } from "@/lib/errors";
 import { useWallet } from "@/components/WalletProvider";
 
@@ -16,7 +17,7 @@ export default function DepositPage() {
   const [amount, setAmount] = useState<string>("1000000"); // 1.0 (if token has 6 decimals)
   const [busy, setBusy] = useState(false);
   const [txid, setTxid] = useState<string | null>(null);
-  const [vaultBalance, setVaultBalance] = useState<JsonClarity | null>(null);
+  const [vaultBalance, setVaultBalance] = useState<VaultBalance | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
@@ -141,7 +142,7 @@ export default function DepositPage() {
                 <span className="text-zinc-400">Loading…</span>
               ) : (
                 <pre className="overflow-auto rounded-lg bg-black/40 p-3 text-xs text-zinc-200">
-                  {JSON.stringify(vaultBalance, null, 2)}
+                  {JSON.stringify(vaultBalance, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2)}
                 </pre>
               )}
             </div>

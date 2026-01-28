@@ -99,9 +99,9 @@ export function JobCard({ job }: JobCardProps) {
         {/* Executor Info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {job.executor && (
+            {job.executorContract && (
               <Badge variant="primary" size="sm">
-                {job.executor}
+                {job.executorContract.split('.').pop()}
               </Badge>
             )}
           </div>

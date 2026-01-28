@@ -15,7 +15,6 @@ export function VaultBalance({ loading }: VaultBalanceProps) {
   
   const totalNum = Number(balance.total)
   const lockedNum = Number(balance.locked)
-  const availableNum = Number(balance.available)
   
   const utilization = totalNum > 0 
     ? (lockedNum / totalNum) * 100 

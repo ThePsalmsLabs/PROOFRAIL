@@ -4,12 +4,9 @@ import Link from 'next/link'
 import { Container } from '@/components/layout/Container'
 import { Button } from '@/components/ui/Button'
 import { JobsList } from '@/components/jobs/JobsList'
-import { useWallet } from '@/components/WalletProvider'
 import { Plus } from 'lucide-react'
 
 export default function JobsPage() {
-  const { address } = useWallet()
-
   return (
     <Container className="py-8 space-y-8">
       {/* Header */}

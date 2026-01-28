@@ -104,6 +104,16 @@ plan:
             path: contracts/executors/alex-executor.clar
             clarity-version: 4
         - emulated-contract-publish:
+            contract-name: cctp-bridge-adapter
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/cctp-bridge-adapter.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: pyth-price-oracle
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/pyth-price-oracle.clar
+            clarity-version: 4
+        - emulated-contract-publish:
             contract-name: job-router
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/job-router.clar

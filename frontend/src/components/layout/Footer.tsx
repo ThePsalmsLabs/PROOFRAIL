@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Container } from './Container'
 import { Github, Twitter } from 'lucide-react'
 
@@ -21,14 +22,14 @@ export function Footer() {
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/vault" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
+                <Link href="/vault" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
                   Vault
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/jobs" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
+                <Link href="/jobs" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
                   Jobs
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -39,9 +40,9 @@ export function Footer() {
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/docs" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
+                <Link href="/docs" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
                   Documentation
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-neutral-600 dark:text-neutral-400 hover:text-brand-500">
