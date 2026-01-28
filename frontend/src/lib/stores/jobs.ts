@@ -13,14 +13,12 @@ interface JobsState {
   clearError: () => void
 }
 
-export const useJobsStore = create<JobsState>((set, get) => ({
+export const useJobsStore = create<JobsState>((set) => ({
   jobs: [],
   loading: false,
   error: null,
   fetchJobs: async (sender: string, limit = 50) => {
-    const { setLoading, setError } = get()
-    setLoading(true)
-    setError(null)
+    set({ loading: true, error: null })
     
     try {
       const nextId = await getNextJobId(sender)
@@ -42,13 +40,11 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       // Sort by ID descending (most recent first)
       validJobs.sort((a, b) => b.id - a.id)
       
-      set({ jobs: validJobs, error: null })
+      set({ jobs: validJobs, error: null, loading: false })
     } catch (err) {
       const message = getErrorMessage(err)
-      setError(message)
+      set({ error: message, loading: false })
       console.error('Failed to fetch jobs:', err)
-    } finally {
-      setLoading(false)
     }
   },
   addJob: (job) => set((state) => ({ 
