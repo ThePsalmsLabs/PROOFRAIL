@@ -33,9 +33,7 @@ AUTOMATED_AGENT_GUIDE.md
 AUTOMATED_AGENT_IMPLEMENTATION.md
 FRONTEND_IMPLEMENTATION_PROGRESS.md
 FRONTEND_READY_TO_COMPLETE.md
-Frontend-redesign.md
-
-# Sensitive files
+Frontend-redesign.md# Sensitive files
 .env
 .env.local
 .env.*.local

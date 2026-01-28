@@ -18,7 +18,7 @@ export function WithdrawForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const availableAmount = balance.available / 1_000_000 // Convert from micro to USDCx
+  const availableAmount = Number(balance.available) / 1_000_000 // Convert from micro to USDCx
 
   const handleMax = () => {
     setAmount(availableAmount.toFixed(2))
@@ -56,7 +56,9 @@ export function WithdrawForm() {
       })
       
       setAmount('')
-      await refetch()
+      if (address) {
+        await refetch(address, address)
+      }
     } catch (err) {
       const message = getErrorMessage(err)
       setError(message)

@@ -1,5 +1,6 @@
-export function formatUSDCx(microAmount: number): string {
-  return (microAmount / 1_000_000).toFixed(2) + ' USDCx'
+export function formatUSDCx(microAmount: number | bigint): string {
+  const amount = typeof microAmount === 'bigint' ? Number(microAmount) : microAmount
+  return (amount / 1_000_000).toFixed(2) + ' USDCx'
 }
 
 export function formatAddress(address: string): string {
@@ -21,8 +22,9 @@ export function formatRelativeTime(timestamp: number): string {
   return 'just now'
 }
 
-export function formatBlockHeight(height: number): string {
-  return height.toLocaleString()
+export function formatBlockHeight(height: number | bigint): string {
+  const h = typeof height === 'bigint' ? Number(height) : height
+  return h.toLocaleString()
 }
 
 export function formatPercentage(value: number): string {

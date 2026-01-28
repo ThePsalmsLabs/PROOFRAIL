@@ -11,6 +11,8 @@ export const CONTRACTS = {
   escrow: { address: DEPLOYER_ADDRESS, name: "job-escrow" },
   router: { address: DEPLOYER_ADDRESS, name: "job-router" },
   registry: { address: DEPLOYER_ADDRESS, name: "stake-registry" },
+  pythOracle: { address: DEPLOYER_ADDRESS, name: "pyth-price-oracle" },
+  bridgeAdapter: { address: DEPLOYER_ADDRESS, name: "cctp-bridge-adapter" },
 
   // Testnet demo assets (mock contracts deployed by the plan)
   usdcx: { address: DEPLOYER_ADDRESS, name: "mock-usdcx" },

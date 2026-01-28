@@ -51,7 +51,9 @@ export function DepositForm() {
       })
       
       setAmount('')
-      await refetch()
+      if (address) {
+        await refetch(address, address)
+      }
     } catch (err) {
       const message = getErrorMessage(err)
       setError(message)
