@@ -38,8 +38,8 @@ function DetailItem({
 }
 
 export function JobCard({ job }: JobCardProps) {
-  const isActive = job.status === 'open'
-  const isExecuted = job.status === 'executed'
+  const isActive = job.statusLabel === 'open'
+  const isExecuted = job.statusLabel === 'executed'
 
   return (
     <Card 
@@ -55,7 +55,7 @@ export function JobCard({ job }: JobCardProps) {
               <h3 className="font-semibold text-lg text-neutral-900 dark:text-neutral-50">
                 Job #{job.id}
               </h3>
-              <StatusBadge status={job.status} />
+              <StatusBadge status={job.statusLabel} />
             </div>
             {job.protocolUsed && (
               <Badge variant="primary" size="sm" className="mt-1">
@@ -76,12 +76,12 @@ export function JobCard({ job }: JobCardProps) {
           <DetailItem
             icon={<DollarSign className="h-4 w-4" />}
             label="Max Input"
-            value={formatUSDCx(job.maxInput)}
+            value={formatUSDCx(Number(job.maxInput))}
           />
           <DetailItem
             icon={<DollarSign className="h-4 w-4" />}
             label="Agent Fee"
-            value={formatUSDCx(job.agentFee)}
+            value={formatUSDCx(Number(job.agentFee))}
             valueClassName="text-success-600 dark:text-success-400"
           />
           <DetailItem
@@ -89,10 +89,10 @@ export function JobCard({ job }: JobCardProps) {
             label="Agent"
             value={formatAddress(job.agent)}
           />
-          <DetailItem
+            <DetailItem
             icon={<Clock className="h-4 w-4" />}
             label="Expires"
-            value={`Block ${formatBlockHeight(job.expiryBlock)}`}
+            value={`Block ${formatBlockHeight(Number(job.expiryBlock))}`}
           />
         </div>
 
@@ -108,7 +108,7 @@ export function JobCard({ job }: JobCardProps) {
           
           {isExecuted && job.executedAt && (
             <span className="text-xs text-neutral-500 dark:text-neutral-400">
-              Executed at block {formatBlockHeight(job.executedAt)}
+              Executed at block {formatBlockHeight(Number(job.executedAt))}
             </span>
           )}
         </div>
